@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Steganography With Password</title>
+<style>
+    body { 
+        background:#111; 
+        color:#fff; 
+        font-family:Arial, sans-serif; 
+        padding:20px; 
+    }
+
+    /* BOX STYLING */
+    .box { 
+        background: linear-gradient(135deg, #222, #333); 
+        padding:30px; 
+        margin-bottom:30px; 
+        border-radius:15px; 
+        box-shadow: 0 0 20px rgba(0,0,0,0.7);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .box:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    }
+
+    input, textarea { 
+        width:100%; 
+        padding:12px; 
+        border-radius:8px; 
+        border:none; 
+        margin-top:10px; 
+        font-size:16px;
+        transition: all 0.3s ease;
+        background:#111;
+        color:#fff;
+        resize:none; /* remove manual resize */
+    }
+    input:focus, textarea:focus {
+        outline:none;
+    }
+    button { 
+        padding:12px; 
+        background:#6cf; 
+        border:none; 
+        border-radius:8px; 
+        cursor:pointer; 
+        font-weight:bold; 
+        margin-top:15px; 
+        transition: all 0.3s ease;
+    }
+    button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px #6cf;
+    }
+
+    /* TITLE ANIMATIONS */
+    .green-title { 
+        color:#00FF00; 
+        font-size:28px; 
+        font-weight:bold;
+        animation: glowGreen 2s infinite alternate;
+    }
+    .red-title { 
+        color:#FF0000; 
+        font-size:28px; 
+        font-weight:bold;
+        animation: glowRed 2s infinite alternate;
+    }
+
+    @keyframes glowGreen {
+        0% { text-shadow: 0 0 5px #00FF00, 0 0 10px #00FF00; }
+        50% { text-shadow: 0 0 15px #00FF00, 0 0 30px #00FF00; }
+        100% { text-shadow: 0 0 5px #00FF00, 0 0 10px #00FF00; }
+    }
+    @keyframes glowRed {
+        0% { text-shadow: 0 0 5px #FF0000, 0 0 10px #FF0000; }
+        50% { text-shadow: 0 0 15px #FF4500, 0 0 30px #FF4500; }
+        100% { text-shadow: 0 0 5px #FF0000, 0 0 10px #FF0000; }
+    }
+
+    /* LABEL THEMES & ANIMATIONS */
+    .yellow-label { 
+        color:#FFD700; 
+        font-weight:bold; 
+        animation: glowYellow 2s infinite alternate;
+    }
+    .green-label { 
+        color:#00FF00; 
+        font-weight:bold; 
+        animation: glowGreen 2s infinite alternate;
+    }
+    .animate-label { 
+        color:#FF69B4; 
+        font-weight:bold; 
+        animation: glowPink 1.5s infinite alternate;
+    }
+
+    @keyframes glowYellow {
+        0% { text-shadow: 0 0 5px #FFD700; }
+        50% { text-shadow: 0 0 15px #FFFF00; }
+        100% { text-shadow: 0 0 5px #FFD700; }
+    }
+    @keyframes glowPink {
+        0% { text-shadow: 0 0 5px #FF69B4; }
+        50% { text-shadow: 0 0 20px #FF1493; }
+        100% { text-shadow: 0 0 5px #FF69B4; }
+    }
+
+    /* INPUT FOCUS ANIMATIONS */
+    .yellow-input:focus { box-shadow: 0 0 15px #FFD700; }
+    .green-input:focus { box-shadow: 0 0 15px #00FF00; }
+    .animate-input:focus { box-shadow: 0 0 20px #FF1493; animation: glowBorder 1.5s infinite alternate; }
+
+    @keyframes glowBorder {
+        0% { box-shadow: 0 0 5px #FF69B4; }
+        50% { box-shadow: 0 0 20px #FF1493; }
+        100% { box-shadow: 0 0 5px #FF69B4; }
+    }
+</style>
+</head>
+<body>
+
+<h2 class="green-title">Hide Text Inside Image </h2>
+
+<div class="box">
+    <h3 class="yellow-label">1. Choose Image</h3>
+    <input type="file" id="coverImage" accept="image/*" class="yellow-input">
+
+    <h3 class="animate-label">2. Secret Text</h3>
+    <textarea id="secretMsg" placeholder="Enter secret message..." class="animate-input"></textarea>
+
+    <h3 class="green-label">3. Password</h3>
+    <input type="password" id="encPass" placeholder="Password" class="green-input">
+
+    <button onclick="embed()">Hide Text In Image</button>
+</div>
+
+<h2 class="red-title">Extract Hidden Text</h2>
+
+<div class="box">
+    <h3 class="yellow-label">1. Select Stego Image</h3>
+    <input type="file" id="stegoImage" accept="image/*" class="yellow-input">
+
+    <h3 class="green-label">2. Password</h3>
+    <input type="password" id="decPass" placeholder="Password" class="green-input">
+
+    <button onclick="extract()">Extract Text</button>
+
+    <h3 class="animate-label">Hidden Text:</h3>
+    <textarea id="outputText" readonly class="animate-input"></textarea>
+</div>
+
+<script>
+/* Disable drag and drop for Secret Text & Hidden Text */
+document.getElementById('secretMsg').addEventListener('dragover', e => e.preventDefault());
+document.getElementById('secretMsg').addEventListener('drop', e => e.preventDefault());
+document.getElementById('outputText').addEventListener('dragover', e => e.preventDefault());
+document.getElementById('outputText').addEventListener('drop', e => e.preventDefault());
+
+/* Auto-resize textareas based on content */
+function autoResizeTextarea(el) {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+}
+const secretTextarea = document.getElementById('secretMsg');
+secretTextarea.addEventListener('input', () => autoResizeTextarea(secretTextarea));
+const outputTextarea = document.getElementById('outputText');
+outputTextarea.addEventListener('input', () => autoResizeTextarea(outputTextarea));
+
+/* AES encrypt / decrypt and LSB code same as before */
+async function encryptText(msg, password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({ name:"PBKDF2", salt, iterations:300000, hash:"SHA-256" }, keyMaterial, { name:"AES-GCM", length:256 }, false, ["encrypt"]);
+    const encrypted = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc.encode(msg));
+    const header = new Uint8Array(28);
+    header.set(salt,0);
+    header.set(iv,16);
+    return { cipher: new Uint8Array(encrypted), header };
+}
+
+async function decryptText(cipher, header, password) {
+    const salt = header.slice(0,16);
+    const iv = header.slice(16);
+    const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({ name:"PBKDF2", salt, iterations:300000, hash:"SHA-256" }, keyMaterial, { name:"AES-GCM", length:256 }, false, ["decrypt"]);
+    try {
+        const decrypted = await crypto.subtle.decrypt({ name:"AES-GCM", iv }, key, cipher);
+        return new TextDecoder().decode(decrypted);
+    } catch {
+        return null;
+    }
+}
+
+function encodeLSB(imageData, bytes) {
+    const data = imageData.data;
+    const totalAvailableBits = data.length - Math.floor(data.length / 4);
+    if (bytes.length * 8 > totalAvailableBits) throw "Message too large for image.";
+    let bitIndex = 0;
+    for (let byteIdx = 0; byteIdx < bytes.length; byteIdx++) {
+        let b = bytes[byteIdx];
+        for (let bit = 0; bit < 8; bit++, bitIndex++) {
+            const colorByteIndex = getColorByteIndex(bitIndex, data.length);
+            const bitValue = (b >> bit) & 1;
+            data[colorByteIndex] = (data[colorByteIndex] & 0xFE) | bitValue;
+        }
+    }
+}
+function decodeLSB(imageData, byteLength) {
+    const data = imageData.data;
+    const bytes = new Uint8Array(byteLength);
+    let bitIndex = 0;
+    for (let byteIdx = 0; byteIdx < byteLength; byteIdx++) {
+        let val = 0;
+        for (let bit = 0; bit < 8; bit++, bitIndex++) {
+            const colorByteIndex = getColorByteIndex(bitIndex, data.length);
+            const bitValue = data[colorByteIndex] & 1;
+            val |= (bitValue << bit);
+        }
+        bytes[byteIdx] = val;
+    }
+    return bytes;
+}
+function getColorByteIndex(colorByteIndex, dataLength) {
+    const pixelIndex = Math.floor(colorByteIndex / 3);
+    const channelInPixel = colorByteIndex % 3;
+    const base = pixelIndex * 4;
+    return base + channelInPixel;
+}
+
+async function embed() {
+    const file = document.getElementById("coverImage").files[0];
+    const msg = document.getElementById("secretMsg").value;
+    const pass = document.getElementById("encPass").value;
+    if (!file || !msg || !pass) return alert("Add image + text + password");
+    const img = new Image(); img.src = URL.createObjectURL(file); await img.decode();
+    const canvas = document.createElement("canvas"); canvas.width=img.width; canvas.height=img.height;
+    const ctx = canvas.getContext("2d"); ctx.drawImage(img,0,0);
+    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const { cipher, header } = await encryptText(msg, pass);
+    const lengthBytes = new Uint8Array(4); new DataView(lengthBytes.buffer).setUint32(0, cipher.length, false);
+    const final = new Uint8Array(header.length + 4 + cipher.length);
+    final.set(header,0); final.set(lengthBytes, header.length); final.set(cipher, header.length + 4);
+    try { encodeLSB(imgData, final); } catch (e) { return alert("Error: " + e); }
+    ctx.putImageData(imgData,0,0);
+    const stegoURL = canvas.toDataURL("image/png");
+    const a = document.createElement("a"); a.href = stegoURL; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
+}
+
+async function extract() {
+    const file = document.getElementById("stegoImage").files[0];
+    const pass = document.getElementById("decPass").value;
+    if (!file || !pass) return alert("Select stego image + enter password");
+    const img = new Image(); img.src = URL.createObjectURL(file); await img.decode();
+    const canvas = document.createElement("canvas"); canvas.width=img.width; canvas.height=img.height;
+    const ctx = canvas.getContext("2d"); ctx.drawImage(img,0,0);
+    const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+    const header = decodeLSB(imgData, 28);
+    const first32 = decodeLSB(imgData, 32); const lenBytes = first32.slice(28, 32);
+    const len = new DataView(lenBytes.buffer).getUint32(0,false);
+    if (len <= 0 || len > ((imgData.data.length/4)*3)) return alert("Invalid embedded length — image may not contain embedded data or is corrupted.");
+    const total = 28 + 4 + len;
+    const full = decodeLSB(imgData, total);
+    const cipherBytes = full.slice(32);
+    const text = await decryptText(cipherBytes, header, pass);
+    document.getElementById("outputText").value = text ? text : "❌ Wrong password or corrupted data";
+    autoResizeTextarea(outputTextarea); // adjust height after extraction
+}
+</script>
+
+</body>
+</html>
